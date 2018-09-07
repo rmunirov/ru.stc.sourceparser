@@ -21,23 +21,19 @@ public class DataParser {
         while (buffer.hasRemaining()) {
             byte symbol = buffer.get();
 
-/*
-            if(serviceSymbols.contains(Integer.valueOf(symbol))) {
-                continue;
-            }
-*/
-
-            if (UtilSymbols.endOfWord.contains(Integer.valueOf(symbol))) {
-                if (words.contains(word.toString())) {
-                    isNeedSave = true;
+            if (!isNeedSave) {
+                if (UtilSymbols.endOfWord.contains(Integer.valueOf(symbol))) {
+                    if (words.contains(word.toString())) {
+                        isNeedSave = true;
+                        word.reset();
+                    }
                     word.reset();
+                    sentence.write(symbol);
+                    continue;
                 }
-                word.reset();
-                sentence.write(symbol);
-                continue;
+                word.write(symbol);
             }
 
-            word.write(symbol);
             sentence.write(symbol);
 
             if (UtilSymbols.endOfSentence.contains(Integer.valueOf(symbol))) {

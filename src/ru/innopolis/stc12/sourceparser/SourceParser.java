@@ -9,18 +9,17 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 public class SourceParser implements Parser {
-    private final Integer MAX_THREADS = 20;
-    private final Integer MAX_BUFFER_SIZE = 400000;
+    private final Integer MAX_BUFFERS = 20;
+    private final Integer MAX_BUFFER_SIZE = 20971520;
 
     private Set<String> keys = new CopyOnWriteArraySet<>();
     private Set<String> result = new CopyOnWriteArraySet<>();
     private List<ByteBuffer> buffers = new ArrayList<>();
 
-    private DataParser dataParser = new DataParser();
-
+    private ParserExecutor parserExecutor = new ParserExecutor();
 
     @Override
     public void getOccurencies(String[] sources, String[] words, String res) throws Exception {
@@ -30,12 +29,12 @@ public class SourceParser implements Parser {
         }
 
         for (int i = 0; i < sources.length; i++) {
+
             FileInputStream fileInputStream = new FileInputStream(sources[i]);
             FileChannel fileChannel = fileInputStream.getChannel();
+
             int fileLength = fileInputStream.available();
             if (fileLength > MAX_BUFFER_SIZE) {
-                int parts = fileLength / MAX_BUFFER_SIZE + 1;
-
                 long startPart = 0;
                 long endPart = findSentenceEndPositions(fileInputStream, MAX_BUFFER_SIZE);
 
@@ -43,27 +42,24 @@ public class SourceParser implements Parser {
                     buffers.add(fileChannel.map(FileChannel.MapMode.READ_ONLY, startPart, endPart - startPart));
                     startPart = endPart + 1;
                     endPart += findSentenceEndPositions(fileInputStream, MAX_BUFFER_SIZE);
+                    if (buffers.size() >= MAX_BUFFERS) {
+                        execute();
+                    }
                 }
 
-                ExecutorService threadPool = Executors.newFixedThreadPool(buffers.size());
-                List<Future<Boolean>> futures = new ArrayList<>();
-                for (int thread = 0; thread < buffers.size(); thread++) {
-                    ByteBuffer byteBuffer = buffers.get(thread);
-                    futures.add(CompletableFuture.supplyAsync(() -> dataParser.parse(byteBuffer, keys, result), threadPool));
+                execute();
+            } else {
+                buffers.add(fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileLength));
+                if (buffers.size() >= MAX_BUFFERS) {
+                    execute();
                 }
-
-                boolean done = false;
-                for (Future<Boolean> future : futures) {
-                    done = future.get();
-                }
-
-                FileOutputStream fileOutputStream = new FileOutputStream("result.txt");
-                fileOutputStream.write(result.toString().getBytes());
-
-                threadPool.shutdown();
             }
         }
-
+        if (!buffers.isEmpty()) {
+            execute();
+        }
+        FileOutputStream fileOutputStream = new FileOutputStream("result.txt");
+        fileOutputStream.write(result.toString().getBytes());
     }
 
     private long findSentenceEndPositions(InputStream inputStream, int offset) {
@@ -99,5 +95,14 @@ public class SourceParser implements Parser {
         }
 
         return -1;
+    }
+
+    private boolean execute() throws Exception {
+        boolean done = parserExecutor.execute(buffers, keys, result);
+        if (done == false) {
+            throw new Exception("parse failed");
+        }
+        buffers.clear();
+        return done;
     }
 }
