@@ -33,6 +33,7 @@ public class SourceParser implements Parser {
             FileInputStream fileInputStream = new FileInputStream(sources[i]);
             FileChannel fileChannel = fileInputStream.getChannel();
 
+
             int fileLength = fileInputStream.available();
             if (fileLength > MAX_BUFFER_SIZE) {
                 long startPart = 0;
