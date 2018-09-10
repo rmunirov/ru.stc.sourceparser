@@ -1,5 +1,8 @@
 package ru.innopolis.stc12.sourceparser;
 
+import com.sun.xml.internal.ws.util.ByteArrayBuffer;
+
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -30,10 +33,32 @@ public class SourceParser implements Parser {
 
             URL url = new URL(sources[i]);
             InputStream inputStream = url.openStream();
-            int fileLength = inputStream.available();
+            int length = inputStream.available();
 
+            if (length > MAX_BUFFER_SIZE) {
+                int partCount = length / MAX_BUFFER_SIZE + 1;
+                int bufferSize = MAX_BUFFER_SIZE;
+                if (partCount < MAX_BUFFERS) {
+                    bufferSize = length / MAX_BUFFERS + 1;
+                }
+
+                while (inputStream.available() > 0) {
+                    buffers.add(getByteBufferWithEndSentence(inputStream, bufferSize));
+                    if (buffers.size() >= MAX_BUFFERS) {
+                        execute();
+                    }
+                }
+                execute();
+            } else {
+                buffers.add(getByteBufferWithEndSentence(inputStream, length));
+                if (buffers.size() >= MAX_BUFFERS) {
+                    execute();
+                }
+            }
         }
 
+        FileOutputStream fileOutputStream = new FileOutputStream("result.txt");
+        fileOutputStream.write(result.toString().getBytes());
 
 
 /*
@@ -70,6 +95,33 @@ public class SourceParser implements Parser {
 */
     }
 
+    private byte[] getByteBufferWithEndSentence(InputStream inputStream, int size) throws IOException {
+        if (inputStream == null) return null;
+        if (size <= 0) return null;
+
+        int length = inputStream.available();
+
+        if (length < size) {
+            size = length;
+        }
+
+        byte[] bytes = new byte[size];
+        inputStream.read(bytes);
+
+        //found end sentence
+        ByteArrayBuffer buffer = new ByteArrayBuffer(size);
+        buffer.write(bytes);
+        int symbol;
+        while (!UtilSymbols.endOfSentence.contains(symbol = inputStream.read())) {
+            if (symbol == -1) {
+                break;
+            }
+            buffer.write(symbol);
+        }
+        return buffer.getRawData();
+    }
+
+/*
     private long findSentenceEndPositions(InputStream inputStream, int offset) {
         if (inputStream == null) return -1;
         if (offset <= 0) return -1;
@@ -104,9 +156,10 @@ public class SourceParser implements Parser {
 
         return -1;
     }
+*/
 
     private boolean execute() throws Exception {
-        boolean done = false/* = parserExecutor.execute(buffers, keys, result)*/;
+        boolean done = parserExecutor.execute(buffers, new TreeSet<>(keys), result);
         if (done == false) {
             throw new Exception("parse failed");
         }

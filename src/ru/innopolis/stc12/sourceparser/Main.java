@@ -1,22 +1,11 @@
 package ru.innopolis.stc12.sourceparser;
 
-import com.sun.xml.internal.messaging.saaj.util.ByteInputStream;
-import com.sun.xml.internal.ws.util.ByteArrayBuffer;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-
 public class Main {
     public static void main(String[] args) {
         try {
             long start = System.currentTimeMillis();
 
+/*
             URL url = new URL("file:D://Projects//java/file.txt");
             InputStream inputStream = url.openStream();
 
@@ -41,13 +30,6 @@ public class Main {
             }
 
             ByteInputStream byteInputStream = new ByteInputStream(list.get(0), list.get(0).length);
-/*
-            int r;
-            StringBuilder st = new StringBuilder();
-            while ((r = byteInputStream.read()) != -1) {
-                //st.appendCodePoint(r);
-            }
-*/
 
             System.out.println("1 - " + (System.currentTimeMillis() - start));
 
@@ -61,7 +43,7 @@ public class Main {
             words_.add("but");
             words_.add("world");
             words_.add("compile");
-//            words_.add("the");
+            words_.add("the");
             words_.add("key");
             words_.add("press");
             words_.add("button");
@@ -100,10 +82,11 @@ public class Main {
             }
 
             System.out.println("1 - " + (System.currentTimeMillis() - start));
+*/
             start = System.currentTimeMillis();
 
 
-            String[] sources = new String[]{"D://Projects//java/file.txt"};
+            String[] sources = new String[]{"file:D://Projects//java/file.txt"};
             String[] words1 = new String[]{"My", "sentence", "but", "world", "compile", "the", "key", "press", "button", "top", "предложение"};
             String res = "result.txt";
 
