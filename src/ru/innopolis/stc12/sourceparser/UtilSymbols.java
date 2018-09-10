@@ -11,10 +11,13 @@ public class UtilSymbols {
         endOfSentence.add(Integer.valueOf('.'));
         endOfSentence.add(Integer.valueOf('?'));
         endOfSentence.add(Integer.valueOf('!'));
-        endOfSentence.add(Integer.valueOf('\r'));
-        endOfSentence.add(Integer.valueOf('\n'));
+//        endOfSentence.add(Integer.valueOf('\r'));
+//        endOfSentence.add(Integer.valueOf('\n'));
 
         endOfWord.add(Integer.valueOf(' '));
         endOfWord.add(Integer.valueOf(','));
+        endOfWord.add(Integer.valueOf('.'));
+        endOfWord.add(Integer.valueOf('?'));
+        endOfWord.add(Integer.valueOf('!'));
     }
 }

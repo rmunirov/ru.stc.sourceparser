@@ -1,23 +1,21 @@
 package ru.innopolis.stc12.sourceparser;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 public class SourceParser implements Parser {
     private final Integer MAX_BUFFERS = 20;
-    private final Integer MAX_BUFFER_SIZE = 20971520;
+    private final Integer MAX_BUFFER_SIZE = 20_971_520;
 
-    private Set<String> keys = new CopyOnWriteArraySet<>();
+    private Set<String> keys = new TreeSet<>();
     private Set<String> result = new CopyOnWriteArraySet<>();
-    private List<ByteBuffer> buffers = new ArrayList<>();
+    private List<byte[]> buffers = new ArrayList<>();
 
     private ParserExecutor parserExecutor = new ParserExecutor();
 
@@ -30,11 +28,19 @@ public class SourceParser implements Parser {
 
         for (int i = 0; i < sources.length; i++) {
 
+            URL url = new URL(sources[i]);
+            InputStream inputStream = url.openStream();
+            int fileLength = inputStream.available();
+
+        }
+
+
+
+/*
             FileInputStream fileInputStream = new FileInputStream(sources[i]);
             FileChannel fileChannel = fileInputStream.getChannel();
 
 
-            int fileLength = fileInputStream.available();
             if (fileLength > MAX_BUFFER_SIZE) {
                 long startPart = 0;
                 long endPart = findSentenceEndPositions(fileInputStream, MAX_BUFFER_SIZE);
@@ -61,6 +67,7 @@ public class SourceParser implements Parser {
         }
         FileOutputStream fileOutputStream = new FileOutputStream("result.txt");
         fileOutputStream.write(result.toString().getBytes());
+*/
     }
 
     private long findSentenceEndPositions(InputStream inputStream, int offset) {
@@ -99,7 +106,7 @@ public class SourceParser implements Parser {
     }
 
     private boolean execute() throws Exception {
-        boolean done = parserExecutor.execute(buffers, keys, result);
+        boolean done = false/* = parserExecutor.execute(buffers, keys, result)*/;
         if (done == false) {
             throw new Exception("parse failed");
         }

@@ -1,51 +1,67 @@
 package ru.innopolis.stc12.sourceparser;
 
+import com.sun.xml.internal.messaging.saaj.util.ByteInputStream;
+import com.sun.xml.internal.ws.util.ByteArrayBuffer;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class Main {
     public static void main(String[] args) {
         try {
-/*
-            String string = "qwe.zzz!aa ? 11123 ?";
-            Matcher matcher = Pattern.compile("([^.!?]+[.!?])").matcher(string);
-            while (matcher.find())
-            {
-                System.out.println(matcher.group(1));
-            }
-*/
+            long start = System.currentTimeMillis();
 
             URL url = new URL("file:D://Projects//java/file.txt");
             InputStream inputStream = url.openStream();
-            int size = inputStream.available();
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"));
 
-/*
-            Scanner scanner = new Scanner(bufferedReader);
-            while (scanner.hasNext()){
-                String string = scanner.next();
-                System.out.println(string);
+            int size = inputStream.available();
+            List<byte[]> list = new ArrayList<>();
+
+
+            while (inputStream.available() > 0) {
+                byte[] bytes = new byte[10_971_520];
+                ByteArrayBuffer buffer = new ByteArrayBuffer(10_971_520);
+                inputStream.read(bytes);
+                buffer.write(bytes);
+                int smbl;
+                while (!UtilSymbols.endOfSentence.contains(smbl = inputStream.read())) {
+                    if (smbl == -1) {
+                        break;
+                    }
+                    buffer.write(smbl);
+                }
+                list.add(buffer.getRawData());
+                buffer.close();
             }
-            System.out.println("2 - " + (System.currentTimeMillis() - start));
+
+            ByteInputStream byteInputStream = new ByteInputStream(list.get(0), list.get(0).length);
+/*
+            int r;
+            StringBuilder st = new StringBuilder();
+            while ((r = byteInputStream.read()) != -1) {
+                //st.appendCodePoint(r);
+            }
 */
 
+            System.out.println("1 - " + (System.currentTimeMillis() - start));
 
-            //String line = bufferedReader.readLine();
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(byteInputStream, "UTF-8"));
 
             Set<String> result = new TreeSet<>();
             Set<String> words_ = new TreeSet<>();
+
             words_.add("My");
             words_.add("sentence");
             words_.add("but");
             words_.add("world");
             words_.add("compile");
-            words_.add("the");
+//            words_.add("the");
             words_.add("key");
             words_.add("press");
             words_.add("button");
@@ -55,25 +71,10 @@ public class Main {
             int symbol;
             StringBuilder word = new StringBuilder();
             StringBuilder sentence = new StringBuilder();
-            long start = System.currentTimeMillis();
 
-            Pattern pattern = Pattern.compile("(\\W)(my|sentence|предложение|компьтер|данные|задач|объект|должен|программа|шаг|части)(\\W)");
-            Matcher matcher;
 
             while ((symbol = bufferedReader.read()) != -1) {
 
-                if (UtilSymbols.endOfSentence.contains(Integer.valueOf(symbol))) {
-                    sentence.appendCodePoint(symbol);
-                    matcher = pattern.matcher(sentence);
-                    if (matcher.find()) {
-                        result.add(sentence.toString());
-                    }
-                    sentence.delete(0, sentence.length());
-                } else {
-                    sentence.appendCodePoint(symbol);
-                }
-
-/*
                 if (!isNeedSave) {
                     if (UtilSymbols.endOfWord.contains(symbol)) {
                         if (words_.contains(word.toString())) {
@@ -92,10 +93,10 @@ public class Main {
                         result.add(sentence.toString());
                         isNeedSave = false;
                     }
-                    sentence.delete(0, word.length());
+                    sentence.delete(0, sentence.length());
                     word.delete(0, word.length());
                 }
-*/
+
             }
 
             System.out.println("1 - " + (System.currentTimeMillis() - start));
