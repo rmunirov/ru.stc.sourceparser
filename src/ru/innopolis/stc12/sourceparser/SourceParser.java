@@ -18,6 +18,7 @@ public class SourceParser implements Parser {
 
     private Set<String> keys = new TreeSet<>();
     private Set<String> result = new CopyOnWriteArraySet<>();
+    //TODO can create byte buffers at once?
     private List<byte[]> buffers = new ArrayList<>();
 
     private ParserExecutor parserExecutor = new ParserExecutor();
@@ -50,49 +51,17 @@ public class SourceParser implements Parser {
                 }
                 execute();
             } else {
+                //TODO maybe need write small files in common buffer and process
                 buffers.add(getByteBufferWithEndSentence(inputStream, length));
                 if (buffers.size() >= MAX_BUFFERS) {
                     execute();
                 }
             }
         }
-
+        execute();
+        //TODO that's right?
         FileOutputStream fileOutputStream = new FileOutputStream("result.txt");
         fileOutputStream.write(result.toString().getBytes());
-
-
-/*
-            FileInputStream fileInputStream = new FileInputStream(sources[i]);
-            FileChannel fileChannel = fileInputStream.getChannel();
-
-
-            if (fileLength > MAX_BUFFER_SIZE) {
-                long startPart = 0;
-                long endPart = findSentenceEndPositions(fileInputStream, MAX_BUFFER_SIZE);
-
-                while (endPart <= fileLength) {
-                    buffers.add(fileChannel.map(FileChannel.MapMode.READ_ONLY, startPart, endPart - startPart));
-                    startPart = endPart + 1;
-                    endPart += findSentenceEndPositions(fileInputStream, MAX_BUFFER_SIZE);
-                    if (buffers.size() >= MAX_BUFFERS) {
-                        execute();
-                    }
-                }
-
-                execute();
-            } else {
-                buffers.add(fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileLength));
-                if (buffers.size() >= MAX_BUFFERS) {
-                    execute();
-                }
-            }
-        }
-        if (!buffers.isEmpty()) {
-            execute();
-        }
-        FileOutputStream fileOutputStream = new FileOutputStream("result.txt");
-        fileOutputStream.write(result.toString().getBytes());
-*/
     }
 
     private byte[] getByteBufferWithEndSentence(InputStream inputStream, int size) throws IOException {
@@ -107,9 +76,8 @@ public class SourceParser implements Parser {
 
         byte[] bytes = new byte[size];
         inputStream.read(bytes);
-
         //found end sentence
-        ByteArrayBuffer buffer = new ByteArrayBuffer(size);
+        ByteArrayBuffer buffer = new ByteArrayBuffer();
         buffer.write(bytes);
         int symbol;
         while (!UtilSymbols.endOfSentence.contains(symbol = inputStream.read())) {
@@ -121,44 +89,11 @@ public class SourceParser implements Parser {
         return buffer.getRawData();
     }
 
-/*
-    private long findSentenceEndPositions(InputStream inputStream, int offset) {
-        if (inputStream == null) return -1;
-        if (offset <= 0) return -1;
-
-        try {
-            int size = inputStream.available();
-
-            if (size <= offset) {
-                return size;
-            }
-
-            long realOffset = inputStream.skip(offset);
-
-            if (realOffset == 0) {
-                return -1;
-            }
-
-            int result = 1;
-            int symbol = inputStream.read();
-            while (!UtilSymbols.endOfSentence.contains(symbol)) {
-                symbol = inputStream.read();
-                if (symbol == -1) {
-                    break;
-                }
-                result++;
-            }
-            return realOffset + result;
-
-        } catch (IOException e) {
-            e.printStackTrace();
+    private boolean execute() throws Exception {
+        if (buffers.isEmpty()) {
+            return false;
         }
 
-        return -1;
-    }
-*/
-
-    private boolean execute() throws Exception {
         boolean done = parserExecutor.execute(buffers, new TreeSet<>(keys), result);
         if (done == false) {
             throw new Exception("parse failed");

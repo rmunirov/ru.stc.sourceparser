@@ -15,32 +15,35 @@ public class DataParser {
     }
 
     public boolean parse(ByteInputStream buffer, Set words, Set result) {
+        if (buffer == null) return false;
+        if (words == null) return false;
+        if (result == null) return false;
+        if (words.isEmpty()) return false;
+
+        //TODO maybe use TRIE structure for words?
         StringBuilder word = new StringBuilder();
         StringBuilder sentence = new StringBuilder();
         int symbol;
         while ((symbol = buffer.read()) != -1) {
             if (!isNeedSave) {
-                if (UtilSymbols.endOfWord.contains(Integer.valueOf(symbol))) {
+                if (symbol == ' ' || symbol == '.' || symbol == '!' || symbol == '?') {
                     if (words.contains(word.toString())) {
                         isNeedSave = true;
-                        word.delete(0, word.length());
                     }
                     word.delete(0, word.length());
-                    sentence.appendCodePoint(symbol);
-                    continue;
+                } else {
+                    word.appendCodePoint(symbol);
                 }
-                word.appendCodePoint(symbol);
             }
-
             sentence.appendCodePoint(symbol);
 
-            if (UtilSymbols.endOfSentence.contains(Integer.valueOf(symbol))) {
+            if (symbol == '?' || symbol == '.' || symbol == '!' || symbol == '\r' || symbol == '\n') {
                 if (isNeedSave) {
                     result.add(sentence.toString());
                     isNeedSave = false;
                 }
                 word.delete(0, word.length());
-                sentence.delete(0, word.length());
+                sentence.delete(0, sentence.length());
             }
         }
         return true;
