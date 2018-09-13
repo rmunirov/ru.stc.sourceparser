@@ -6,42 +6,29 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 public class SourceParser implements Parser {
-    private final Integer MAX_BUFFERS = 20;
-    private final Integer MAX_BUFFER_SIZE = 20_971_520;
-
+    private final Integer MAX_BUFFERS = 10;
+    private final Integer MAX_BUFFER_SIZE = 10_971_520;
     private Set<String> keys = new TreeSet<>();
     private Set<String> result = new CopyOnWriteArraySet<>();
-    //TODO can create byte buffers at once?
-    private List<byte[]> buffers = new ArrayList<>();
-
+    private List<ByteArrayBuffer> buffers = new ArrayList<>();
     private ParserExecutor parserExecutor = new ParserExecutor();
 
     @Override
     public void getOccurencies(String[] sources, String[] words, String res) throws Exception {
+        keys.addAll(Arrays.asList(words));
 
-        for (int i = 0; i < words.length; i++) {
-            keys.add(words[i]);
-        }
+        for (String source : sources) {
 
-        for (int i = 0; i < sources.length; i++) {
-
-            URL url = new URL(sources[i]);
+            URL url = new URL(source);
             InputStream inputStream = url.openStream();
             int length = inputStream.available();
 
             if (length > MAX_BUFFER_SIZE) {
-                int partCount = length / MAX_BUFFER_SIZE + 1;
-                int bufferSize = MAX_BUFFER_SIZE;
-                if (partCount < MAX_BUFFERS) {
-                    bufferSize = length / MAX_BUFFERS + 1;
-                }
+                int bufferSize = getBufferSize(length);
 
                 while (inputStream.available() > 0) {
                     buffers.add(getByteBufferWithEndSentence(inputStream, bufferSize));
@@ -64,41 +51,68 @@ public class SourceParser implements Parser {
         fileOutputStream.write(result.toString().getBytes());
     }
 
-    private byte[] getByteBufferWithEndSentence(InputStream inputStream, int size) throws IOException {
+    private int getBufferSize(int length) {
+        if (length <= 0) return -1;
+        int partCount = length / MAX_BUFFER_SIZE + 1;
+        int bufferSize = MAX_BUFFER_SIZE;
+        if (partCount < MAX_BUFFERS) {
+            bufferSize = length / MAX_BUFFERS + 1;
+        }
+        return bufferSize;
+    }
+
+    private ByteArrayBuffer getByteBufferWithEndSentence(InputStream inputStream, int size) throws IOException {
         if (inputStream == null) return null;
         if (size <= 0) return null;
 
         int length = inputStream.available();
-
         if (length < size) {
             size = length;
         }
 
         byte[] bytes = new byte[size];
-        inputStream.read(bytes);
-        //found end sentence
-        ByteArrayBuffer buffer = new ByteArrayBuffer();
-        buffer.write(bytes);
-        int symbol;
-        while (!UtilSymbols.endOfSentence.contains(symbol = inputStream.read())) {
-            if (symbol == -1) {
-                break;
-            }
-            buffer.write(symbol);
+        if (inputStream.read(bytes) == -1) {
+            return null;
         }
-        return buffer.getRawData();
+        //found end sentence
+        ByteArrayBuffer buffer = new ByteArrayBuffer(bytes, bytes.length);
+        ByteArrayBuffer sentenceEndBuffer = getEndSentence(inputStream);
+        if (sentenceEndBuffer.size() > 0) {
+            buffer.write(sentenceEndBuffer.getRawData());
+        }
+
+        return buffer;
     }
 
-    private boolean execute() throws Exception {
-        if (buffers.isEmpty()) {
-            return false;
+    private ByteArrayBuffer getEndSentence(InputStream inputStream) throws IOException {
+        ByteArrayBuffer sentenceEndBuffer = new ByteArrayBuffer();
+        int symbol;
+        while ((symbol = inputStream.read()) != -1) {
+            sentenceEndBuffer.write(symbol);
+            if (symbol == '?' || symbol == '.' || symbol == '!' || symbol == '\r' || symbol == '\n') {
+                break;
+            }
         }
+        return sentenceEndBuffer;
+    }
 
-        boolean done = parserExecutor.execute(buffers, new TreeSet<>(keys), result);
-        if (done == false) {
-            throw new Exception("parse failed");
+    private void execute() throws Exception {
+        if (buffers.isEmpty()) {
+            return;
         }
-        buffers.clear();
-        return done;
+        try {
+            boolean done = parserExecutor.execute(buffers, new TreeSet<>(keys), result);
+            if (!done) {
+                throw new Exception("parse failed");
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            throw e;
+        } finally {
+            for (ByteArrayBuffer buffer : buffers) {
+                buffer.close();
+            }
+            buffers.clear();
+        }
     }
 }

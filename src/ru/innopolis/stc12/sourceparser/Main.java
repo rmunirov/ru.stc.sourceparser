@@ -1,11 +1,13 @@
 package ru.innopolis.stc12.sourceparser;
 
 import java.io.File;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
         try {
-
+            Scanner scanner = new Scanner(System.in);
+            scanner.nextLine();
             File folder = new File("D://Projects//java//testSet");
             String[] files = folder.list();
 
@@ -13,7 +15,6 @@ public class Main {
             for (int i = 0; i < sources.length; i++) {
                 sources[i] = new String("file:" + folder.getAbsolutePath() + "//" + files[i]);
             }
-            //String[] sources = new String[]{"file:D://Projects//java//testSet//3192b7cd-e260-4b79-a337-a0f2fe2bf28f.txt"};
             String[] words = new String[]{"asnufliz", "lmmohk", "wczf", "stkxubce", "ymoeo", "Zbrilke", "Gycoha", "gwmdrpnce", "rfvbdkzpk", "tousq", "vzd"};
             String res = "result.txt";
 
@@ -26,7 +27,7 @@ public class Main {
             System.out.println("passed - " + (System.currentTimeMillis() - start) * 0.001 + " seconds");
 
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
         }
     }
 }
