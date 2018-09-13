@@ -11,7 +11,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 public class SourceParser implements Parser {
     private final Integer MAX_BUFFERS = 10;
-    private final Integer MAX_BUFFER_SIZE = 10_971_520;
+    private final Integer MAX_BUFFER_SIZE = 10_485_760;
     private Set<String> keys = new TreeSet<>();
     private Set<String> result = new CopyOnWriteArraySet<>();
     private List<ByteArrayBuffer> buffers = new ArrayList<>();
