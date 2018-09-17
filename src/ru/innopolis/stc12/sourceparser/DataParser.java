@@ -3,18 +3,10 @@ package ru.innopolis.stc12.sourceparser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 
 public class DataParser {
-    private boolean isNeedSave = false;
-
-    public DataParser() {
-        init();
-    }
-
-    private void init() {
-    }
-
-    public boolean parse(InputStream buffer, Set words, Set result) {
+    public boolean parse(InputStream buffer, Set words, BlockingQueue result) {
         if (buffer == null) return false;
         if (words == null) return false;
         if (result == null) return false;
@@ -23,6 +15,7 @@ public class DataParser {
         //TODO maybe use TRIE structure for words?
         StringBuilder word = new StringBuilder();
         StringBuilder sentence = new StringBuilder();
+        boolean isNeedSave = false;
         int symbol;
         try {
             while ((symbol = buffer.read()) != -1) {
@@ -40,14 +33,14 @@ public class DataParser {
 
                 if (symbol == '?' || symbol == '.' || symbol == '!' || symbol == '\r' || symbol == '\n') {
                     if (isNeedSave) {
-                        result.add(sentence.toString());
+                        result.put(sentence.toString());
                         isNeedSave = false;
                     }
                     word.delete(0, word.length());
                     sentence.delete(0, sentence.length());
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             System.out.println(e.getMessage());
         }
         return true;

@@ -9,17 +9,15 @@ import java.util.Set;
 import java.util.concurrent.*;
 
 public class ParserExecutor {
-//    private DataParser dataParser = new DataParser();
+    private DataParser dataParser = new DataParser();
 
-    public boolean execute(List<ByteArrayBuffer> buffers, Set words, Set result) throws ExecutionException, InterruptedException {
+    public boolean execute(List<ByteArrayBuffer> buffers, Set words, BlockingQueue result) throws ExecutionException, InterruptedException {
 
         ExecutorService threadPool = Executors.newFixedThreadPool(buffers.size());
         List<Future<Boolean>> futures = new ArrayList<>();
 
         for (int i = 0; i < buffers.size(); i++) {
             InputStream stream = buffers.get(i).newInputStream();
-            //TODO thread pool work right, if pass parameters? Need create a new object for all threads?
-            DataParser dataParser = new DataParser();
             futures.add(CompletableFuture.supplyAsync(() -> dataParser.parse(stream, words, result), threadPool));
         }
 

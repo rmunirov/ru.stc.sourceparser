@@ -2,12 +2,12 @@ package ru.innopolis.stc12.sourceparser;
 
 import com.sun.xml.internal.ws.util.ByteArrayBuffer;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class SourceParser implements Parser {
     private final Integer MAX_BUFFERS = 10;
@@ -16,7 +16,7 @@ public class SourceParser implements Parser {
     private final Integer MAX_BUFFER_SIZE_FOR_LARGE_FILE = 10_485_760;
     private final Integer MAX_BUFFER_SIZE_FOR_SMALL_FILE = 1_048_576;
     private Set<String> keys = new TreeSet<>();
-    private Set<String> result = new CopyOnWriteArraySet<>();
+    private BlockingQueue<String> result = new LinkedBlockingQueue<>();
     private List<ByteArrayBuffer> buffers = new ArrayList<>();
     private ParserExecutor parserExecutor = new ParserExecutor();
     private ByteArrayBuffer bufferForSmallFiles = new ByteArrayBuffer(MAX_BUFFER_SIZE_FOR_SMALL_FILE);
@@ -24,6 +24,8 @@ public class SourceParser implements Parser {
     @Override
     public void getOccurencies(String[] sources, String[] words, String res) throws Exception {
         keys.addAll(Arrays.asList(words));
+        ResultWriter resultWriter = new ResultWriter(result, res);
+        resultWriter.start();
         for (String source : sources) {
             InputStream inputStream = getFileInputStream(source);
             Integer length = inputStream.available();
@@ -44,9 +46,8 @@ public class SourceParser implements Parser {
             }
         }
         execute(buffers);
-        //TODO that's right?
-        FileOutputStream fileOutputStream = new FileOutputStream("result.txt");
-        fileOutputStream.write(result.toString().getBytes());
+        resultWriter.setFinish(true);
+        resultWriter.join();
     }
 
     private InputStream getFileInputStream(String source) throws IOException {
