@@ -1,6 +1,7 @@
 package ru.innopolis.stc12.sourceparser;
 
 import com.sun.xml.internal.ws.util.ByteArrayBuffer;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,6 +11,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class SourceParser implements Parser {
+    private static final Logger LOGGER = Logger.getLogger(Parser.class);
     private final Integer MAX_BUFFERS = 10;
     private final Integer LARGE_FILE_SIZE = 10_485_760;
     private final Integer SMALL_FILE_SIZE = 51_200;
@@ -24,12 +26,15 @@ public class SourceParser implements Parser {
     @Override
     public void getOccurencies(String[] sources, String[] words, String res) throws Exception {
         keys.addAll(Arrays.asList(words));
+        LOGGER.info("filling the words set");
+        LOGGER.info("set size = " + keys.size());
         ResultWriter resultWriter = new ResultWriter(result, res);
         resultWriter.start();
         for (String source : sources) {
             InputStream inputStream = getFileInputStream(source);
             Integer length = inputStream.available();
             FileType fileType = getFileType(length);
+            LOGGER.info("file selected: " + "<" + source + ">" + " size = " + length + " type: " + fileType.toString());
             switch (fileType) {
                 case LARGE:
                     processLargeFile(inputStream, length);
@@ -45,9 +50,13 @@ public class SourceParser implements Parser {
                 execute(buffers);
             }
         }
+        if (bufferForSmallFiles.size() > 0) {
+            buffers.add(bufferForSmallFiles);
+        }
         execute(buffers);
         resultWriter.setFinish(true);
         resultWriter.join();
+        LOGGER.info("parsing done");
     }
 
     private InputStream getFileInputStream(String source) throws IOException {
@@ -68,8 +77,10 @@ public class SourceParser implements Parser {
 
     private void processLargeFile(InputStream inputStream, Integer length) throws Exception {
         int bufferSize = getBufferSize(length, MAX_BUFFER_SIZE_FOR_LARGE_FILE);
+        LOGGER.info("buffer size = " + bufferSize);
         while (inputStream.available() > 0) {
             buffers.add(getByteBufferWithEndSentence(inputStream, bufferSize));
+            LOGGER.info("large file buffer added in list");
             if (buffers.size() >= MAX_BUFFERS) {
                 execute(buffers);
             }
@@ -79,10 +90,12 @@ public class SourceParser implements Parser {
 
     private void processMediumFile(InputStream inputStream, Integer length) throws IOException {
         buffers.add(getByteBufferWithEndSentence(inputStream, length));
+        LOGGER.info("medium file buffer added in list");
     }
 
     private void processSmallFile(InputStream inputStream) throws IOException {
         if (bufferForSmallFiles.size() >= MAX_BUFFER_SIZE_FOR_SMALL_FILE) {
+            LOGGER.info("small files buffer added in list");
             buffers.add(bufferForSmallFiles);
             bufferForSmallFiles = new ByteArrayBuffer(MAX_BUFFER_SIZE_FOR_SMALL_FILE);
         }
@@ -103,6 +116,7 @@ public class SourceParser implements Parser {
         if (inputStream == null) return null;
         if (size <= 0) return null;
 
+        LOGGER.info("searching the end of sentence");
         int length = inputStream.available();
         if (length < size) {
             size = length;
@@ -118,7 +132,7 @@ public class SourceParser implements Parser {
         if (sentenceEndBuffer.size() > 0) {
             buffer.write(sentenceEndBuffer.getRawData());
         }
-
+        LOGGER.info("end of sentence is founded");
         return buffer;
     }
 
@@ -144,13 +158,14 @@ public class SourceParser implements Parser {
                 throw new Exception("parse failed");
             }
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            LOGGER.error(e);
             throw e;
         } finally {
             for (ByteArrayBuffer buffer : buffers) {
                 buffer.close();
             }
             buffers.clear();
+            LOGGER.info("buffers close and clear");
         }
     }
 }
