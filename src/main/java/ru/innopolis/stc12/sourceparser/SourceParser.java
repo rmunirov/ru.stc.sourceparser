@@ -4,8 +4,6 @@ import com.sun.xml.internal.ws.util.ByteArrayBuffer;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -13,8 +11,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class SourceParser implements Parser {
     private static final Logger LOGGER = Logger.getLogger(Parser.class);
     private final Integer MAX_BUFFERS = 10;
-    private final Integer LARGE_FILE_SIZE = 10_485_760;
-    private final Integer SMALL_FILE_SIZE = 51_200;
     private final Integer MAX_BUFFER_SIZE_FOR_LARGE_FILE = 10_485_760;
     private final Integer MAX_BUFFER_SIZE_FOR_SMALL_FILE = 1_048_576;
     private Set<String> keys = new TreeSet<>();
@@ -30,20 +26,22 @@ public class SourceParser implements Parser {
         LOGGER.info("set size = " + keys.size());
         ResultWriter resultWriter = new ResultWriter(result, res);
         resultWriter.start();
+        ResourceInformation resourceInformation = new ResourceInformation();
+        StreamInformation streamInformation = new StreamInformation();
         for (String source : sources) {
-            InputStream inputStream = getFileInputStream(source);
-            Integer length = inputStream.available();
-            FileType fileType = getFileType(length);
-            LOGGER.info("file selected: " + "<" + source + ">" + " size = " + length + " type: " + fileType.toString());
-            switch (fileType) {
+            resourceInformation.setResource(source);
+            streamInformation.setInputStream(resourceInformation.getInputStream());
+            LOGGER.info("file selected: " + "<" + source + ">" + " size = " + resourceInformation.getLength() +
+                    " type: " + resourceInformation.getFileType().toString());
+            switch (resourceInformation.getFileType()) {
                 case LARGE:
-                    processLargeFile(inputStream, length);
+                    processLargeFile(streamInformation);
                     break;
                 case MEDIUM:
-                    processMediumFile(inputStream, length);
+                    processMediumFile(streamInformation);
                     break;
                 case SMALL:
-                    processSmallFile(inputStream);
+                    processSmallFile(streamInformation);
                     break;
             }
             if (buffers.size() >= MAX_BUFFERS) {
@@ -59,27 +57,12 @@ public class SourceParser implements Parser {
         LOGGER.info("parsing done");
     }
 
-    private InputStream getFileInputStream(String source) throws IOException {
-        URL url = new URL(source);
-        return url.openStream();
-    }
-
-    private FileType getFileType(Integer length) {
-        if (length > LARGE_FILE_SIZE) {
-            return FileType.LARGE;
-        }
-        if (length <= SMALL_FILE_SIZE) {
-            return FileType.SMALL;
-        } else {
-            return FileType.MEDIUM;
-        }
-    }
-
-    private void processLargeFile(InputStream inputStream, Integer length) throws Exception {
-        int bufferSize = getBufferSize(length, MAX_BUFFER_SIZE_FOR_LARGE_FILE);
+    private void processLargeFile(StreamInformation streamInformation) throws Exception {
+        int bufferSize = streamInformation.getSameBufferSizeOfParts(MAX_BUFFERS, MAX_BUFFER_SIZE_FOR_LARGE_FILE);
         LOGGER.info("buffer size = " + bufferSize);
-        while (inputStream.available() > 0) {
-            buffers.add(getByteBufferWithEndSentence(inputStream, bufferSize));
+        ByteArrayBuffer buffer;
+        while ((buffer = streamInformation.getNextBufferByDelimiter(bufferSize, Delimiters.endOfSentence)) != null) {
+            buffers.add(buffer);
             LOGGER.info("large file buffer added in list");
             if (buffers.size() >= MAX_BUFFERS) {
                 execute(buffers);
@@ -88,64 +71,18 @@ public class SourceParser implements Parser {
         execute(buffers);
     }
 
-    private void processMediumFile(InputStream inputStream, Integer length) throws IOException {
-        buffers.add(getByteBufferWithEndSentence(inputStream, length));
+    private void processMediumFile(StreamInformation streamInformation) throws IOException {
+        buffers.add(streamInformation.getBuffer());
         LOGGER.info("medium file buffer added in list");
     }
 
-    private void processSmallFile(InputStream inputStream) throws IOException {
+    private void processSmallFile(StreamInformation streamInformation) throws IOException {
         if (bufferForSmallFiles.size() >= MAX_BUFFER_SIZE_FOR_SMALL_FILE) {
             LOGGER.info("small files buffer added in list");
             buffers.add(bufferForSmallFiles);
             bufferForSmallFiles = new ByteArrayBuffer(MAX_BUFFER_SIZE_FOR_SMALL_FILE);
         }
-        bufferForSmallFiles.write(inputStream);
-    }
-
-    private int getBufferSize(int length, int maxBufferSize) {
-        if (length <= 0) return -1;
-        int partCount = length / maxBufferSize + 1;
-        if (partCount <= MAX_BUFFERS) {
-            return length / partCount + 1;
-        } else {
-            return length / ((partCount / MAX_BUFFERS + 1) * MAX_BUFFERS) + 1;
-        }
-    }
-
-    private ByteArrayBuffer getByteBufferWithEndSentence(InputStream inputStream, int size) throws IOException {
-        if (inputStream == null) return null;
-        if (size <= 0) return null;
-
-        LOGGER.info("searching the end of sentence");
-        int length = inputStream.available();
-        if (length < size) {
-            size = length;
-        }
-
-        byte[] bytes = new byte[size];
-        if (inputStream.read(bytes) == -1) {
-            throw new IOException("can't read data from stream");
-        }
-        //found end sentence
-        ByteArrayBuffer buffer = new ByteArrayBuffer(bytes, bytes.length);
-        ByteArrayBuffer sentenceEndBuffer = getEndSentence(inputStream);
-        if (sentenceEndBuffer.size() > 0) {
-            buffer.write(sentenceEndBuffer.getRawData());
-        }
-        LOGGER.info("end of sentence is founded");
-        return buffer;
-    }
-
-    private ByteArrayBuffer getEndSentence(InputStream inputStream) throws IOException {
-        ByteArrayBuffer sentenceEndBuffer = new ByteArrayBuffer();
-        int symbol;
-        while ((symbol = inputStream.read()) != -1) {
-            sentenceEndBuffer.write(symbol);
-            if (symbol == '?' || symbol == '.' || symbol == '!' || symbol == '\r' || symbol == '\n') {
-                break;
-            }
-        }
-        return sentenceEndBuffer;
+        bufferForSmallFiles.write(streamInformation.getBuffer().getRawData());
     }
 
     private void execute(List<ByteArrayBuffer> buffers) throws Exception {

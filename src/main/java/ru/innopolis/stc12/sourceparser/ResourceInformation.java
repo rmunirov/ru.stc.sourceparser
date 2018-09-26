@@ -7,17 +7,27 @@ import java.io.InputStream;
 import java.net.URL;
 
 public class ResourceInformation {
-    private static Logger LOGGER = Logger.getLogger(ResourceInformation.class);
-    private InputStream inputStream;
+    private static final Logger LOGGER = Logger.getLogger(ResourceInformation.class);
+    private final Integer LARGE_FILE_SIZE = 10_485_760;
     private int length;
+    private final Integer SMALL_FILE_SIZE = 51_200;
+    private InputStream inputStream = null;
 
     public ResourceInformation() {
-        inputStream = null;
-        length = -1;
     }
 
     public ResourceInformation(String resource) throws IOException {
-        setResource(resource);
+        if (!setResource(resource)) {
+            LOGGER.error("resource is not found");
+            throw new IOException("resource is not found");
+        }
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        if (inputStream != null) {
+            inputStream.close();
+        }
     }
 
     private boolean init(String resource) throws IOException {
@@ -26,20 +36,17 @@ public class ResourceInformation {
         }
         if (inputStream != null) {
             inputStream.close();
+            LOGGER.info("resource is released");
         }
         URL url = new URL(resource);
         inputStream = url.openStream();
         length = inputStream.available();
+        LOGGER.info("a new resource is set <" + resource + ">");
         return true;
     }
 
-    public boolean setResource(String resource) {
-        try {
-            return init(resource);
-        } catch (IOException e) {
-            LOGGER.error(e);
-            return false;
-        }
+    public boolean setResource(String resource) throws IOException {
+        return init(resource);
     }
 
     public InputStream getInputStream() {
@@ -47,7 +54,14 @@ public class ResourceInformation {
     }
 
     public FileType getFileType() {
-        return null;
+        if (length > LARGE_FILE_SIZE) {
+            return FileType.LARGE;
+        }
+        if (length <= SMALL_FILE_SIZE) {
+            return FileType.SMALL;
+        } else {
+            return FileType.MEDIUM;
+        }
     }
 
     public int getLength() {
