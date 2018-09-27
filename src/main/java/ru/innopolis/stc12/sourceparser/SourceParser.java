@@ -1,10 +1,13 @@
 package ru.innopolis.stc12.sourceparser;
 
-import com.sun.xml.internal.ws.util.ByteArrayBuffer;
+import org.apache.log4j.Logger;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class SourceParser implements Parser {
     private static final Logger LOGGER = Logger.getLogger(Parser.class);
@@ -13,9 +16,14 @@ public class SourceParser implements Parser {
     private final Integer MAX_BUFFER_SIZE_FOR_SMALL_FILE = 1_048_576;
     private Set<String> keys = new TreeSet<>();
     private BlockingQueue<String> result = new LinkedBlockingQueue<>();
-    private List<ByteArrayBuffer> buffers = new ArrayList<>();
+    private List<ByteArrayOutputStream> buffers = new ArrayList<>();
     private ParserExecutor parserExecutor = new ParserExecutor();
-    private ByteArrayBuffer bufferForSmallFiles = new ByteArrayBuffer(MAX_BUFFER_SIZE_FOR_SMALL_FILE);
+    private ByteArrayOutputStream bufferForSmallFiles = new ByteArrayOutputStream(MAX_BUFFER_SIZE_FOR_SMALL_FILE);
+    private SourceBuffer sourceBuffer;
+
+    public SourceParser(SourceBuffer sourceBuffer) {
+        this.sourceBuffer = sourceBuffer;
+    }
 
     @Override
     public void getOccurencies(String[] sources, String[] words, String res) throws Exception {
@@ -24,22 +32,19 @@ public class SourceParser implements Parser {
         LOGGER.info("set size = " + keys.size());
         ResultWriter resultWriter = new ResultWriter(result, res);
         resultWriter.start();
-        ResourceInformation resourceInformation = new ResourceInformation();
-        StreamInformation streamInformation = new StreamInformation();
         for (String source : sources) {
-            resourceInformation.setResource(source);
-            streamInformation.setInputStream(resourceInformation.getInputStream());
-            LOGGER.info("file selected: " + "<" + source + ">" + " size = " + resourceInformation.getLength() +
-                    " type: " + resourceInformation.getFileType().toString());
-            switch (resourceInformation.getFileType()) {
+            sourceBuffer.setSourceUrl(new URL(source));
+            LOGGER.info("file selected: " + "<" + source + ">" + " size = " + sourceBuffer.getAvailableSize() +
+                    " type: " + sourceBuffer.getSourceType().toString());
+            switch (sourceBuffer.getSourceType()) {
                 case LARGE:
-                    processLargeFile(streamInformation);
+                    processLargeFile(sourceBuffer);
                     break;
                 case MEDIUM:
-                    processMediumFile(streamInformation);
+                    processMediumFile(sourceBuffer);
                     break;
                 case SMALL:
-                    processSmallFile(streamInformation);
+                    processSmallFile(sourceBuffer);
                     break;
             }
             if (buffers.size() >= MAX_BUFFERS) {
@@ -55,11 +60,11 @@ public class SourceParser implements Parser {
         LOGGER.info("parsing done");
     }
 
-    private void processLargeFile(StreamInformation streamInformation) throws Exception {
-        int bufferSize = streamInformation.getSameBufferSizeOfParts(MAX_BUFFERS, MAX_BUFFER_SIZE_FOR_LARGE_FILE);
+    private void processLargeFile(SourceBuffer sourceBuffer) throws Exception {
+        int bufferSize = sourceBuffer.getSameBufferSizeOfParts(MAX_BUFFERS, MAX_BUFFER_SIZE_FOR_LARGE_FILE);
         LOGGER.info("buffer size = " + bufferSize);
-        ByteArrayBuffer buffer;
-        while ((buffer = streamInformation.getNextBufferByDelimiter(bufferSize, Delimiters.endOfSentence)) != null) {
+        ByteArrayOutputStream buffer;
+        while ((buffer = sourceBuffer.getNextBufferByDelimiter(bufferSize, Delimiters.endOfSentence)) != null) {
             buffers.add(buffer);
             LOGGER.info("large file buffer added in list");
             if (buffers.size() >= MAX_BUFFERS) {
@@ -69,21 +74,21 @@ public class SourceParser implements Parser {
         execute(buffers);
     }
 
-    private void processMediumFile(StreamInformation streamInformation) throws IOException {
-        buffers.add(streamInformation.getBuffer());
+    private void processMediumFile(SourceBuffer sourceBuffer) throws IOException {
+        buffers.add(sourceBuffer.getBuffer());
         LOGGER.info("medium file buffer added in list");
     }
 
-    private void processSmallFile(StreamInformation streamInformation) throws IOException {
+    private void processSmallFile(SourceBuffer sourceBuffer) throws IOException {
         if (bufferForSmallFiles.size() >= MAX_BUFFER_SIZE_FOR_SMALL_FILE) {
             LOGGER.info("small files buffer added in list");
             buffers.add(bufferForSmallFiles);
-            bufferForSmallFiles = new ByteArrayBuffer(MAX_BUFFER_SIZE_FOR_SMALL_FILE);
+            bufferForSmallFiles = new ByteArrayOutputStream(MAX_BUFFER_SIZE_FOR_SMALL_FILE);
         }
-        bufferForSmallFiles.write(streamInformation.getBuffer().getRawData());
+        bufferForSmallFiles.write(sourceBuffer.getBuffer().toByteArray());
     }
 
-    private void execute(List<ByteArrayBuffer> buffers) throws Exception {
+    private void execute(List<ByteArrayOutputStream> buffers) throws Exception {
         if (buffers.isEmpty()) {
             return;
         }
@@ -96,7 +101,7 @@ public class SourceParser implements Parser {
             LOGGER.error(e);
             throw e;
         } finally {
-            for (ByteArrayBuffer buffer : buffers) {
+            for (ByteArrayOutputStream buffer : buffers) {
                 buffer.close();
             }
             buffers.clear();

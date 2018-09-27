@@ -28,8 +28,8 @@ public class Main {
 
             long start = System.currentTimeMillis();
 
-
-            SourceParser sourceParser = new SourceParser();
+            SourceBuffer sourceBuffer = new SourceBuffer();
+            SourceParser sourceParser = new SourceParser(sourceBuffer);
             LOGGER.debug("Start parse files");
             sourceParser.getOccurencies(sources, words, res);
             LOGGER.debug("End parse files");

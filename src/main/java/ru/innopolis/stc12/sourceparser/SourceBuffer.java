@@ -1,29 +1,32 @@
 package ru.innopolis.stc12.sourceparser;
 
-import com.sun.xml.internal.ws.util.ByteArrayBuffer;
 import org.apache.log4j.Logger;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.Set;
 
-public class StreamInformation {
-    private static final Logger LOGGER = Logger.getLogger(StreamInformation.class);
+public class SourceBuffer {
+    private static final Logger LOGGER = Logger.getLogger(SourceBuffer.class);
+    private final Integer LARGE_FILE_SIZE = 10_485_760;
+    private final Integer SMALL_FILE_SIZE = 51_200;
     private InputStream inputStream;
 
-    public StreamInformation(InputStream inputStream) {
-        setInputStream(inputStream);
+    public SourceBuffer(URL url) throws IOException {
+        setSourceUrl(url);
     }
 
-    public StreamInformation() {
+    public SourceBuffer() {
     }
 
-    public void setInputStream(InputStream inputStream) {
-        this.inputStream = inputStream;
+    public void setSourceUrl(URL url) throws IOException {
+        this.inputStream = url.openStream();
         LOGGER.info("inputStream is set");
     }
 
-    public ByteArrayBuffer getBuffer() throws IOException {
+    public ByteArrayOutputStream getBuffer() throws IOException {
         if (inputStream == null) {
             LOGGER.warn("input stream is null");
             return null;
@@ -32,12 +35,17 @@ public class StreamInformation {
             LOGGER.warn("input stream is empty");
             return null;
         }
-        ByteArrayBuffer result = new ByteArrayBuffer();
-        result.write(inputStream);
+        byte[] buffer = new byte[inputStream.available()];
+        if (inputStream.read(buffer) == -1) {
+            LOGGER.error("read data from inputStream is failed");
+            return null;
+        }
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        result.write(buffer);
         return result;
     }
 
-    public ByteArrayBuffer getBuffer(int size) throws IOException {
+    public ByteArrayOutputStream getBuffer(int size) throws IOException {
         if (inputStream == null) {
             LOGGER.warn("input stream is null");
             return null;
@@ -59,18 +67,20 @@ public class StreamInformation {
             LOGGER.error("read data from inputStream is failed");
             return null;
         }
-        return new ByteArrayBuffer(buffer);
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        result.write(buffer);
+        return result;
     }
 
-    public ByteArrayBuffer getNextBufferByDelimiter(int size, Set delimiters) throws IOException {
-        ByteArrayBuffer result = getBuffer(size);
+    public ByteArrayOutputStream getNextBufferByDelimiter(int size, Set delimiters) throws IOException {
+        ByteArrayOutputStream result = getBuffer(size);
         if (result == null) {
             return null;
         }
         if (inputStream.available() == 0) {
             return result;
         }
-        ByteArrayBuffer bufferWithDelimiter = new ByteArrayBuffer();
+        ByteArrayOutputStream bufferWithDelimiter = new ByteArrayOutputStream();
         int symbol;
         while ((symbol = inputStream.read()) != -1) {
             bufferWithDelimiter.write(symbol);
@@ -78,13 +88,25 @@ public class StreamInformation {
                 break;
             }
         }
-        result.write(bufferWithDelimiter.getRawData());
+        result.write(bufferWithDelimiter.toByteArray());
         return result;
     }
 
     public int getAvailableSize() throws IOException {
         return inputStream.available();
     }
+
+    public FileType getSourceType() throws IOException {
+        if (inputStream.available() > LARGE_FILE_SIZE) {
+            return FileType.LARGE;
+        }
+        if (inputStream.available() <= SMALL_FILE_SIZE) {
+            return FileType.SMALL;
+        } else {
+            return FileType.MEDIUM;
+        }
+    }
+
 
     public int getSameBufferSizeOfParts(int partCountOfDivider, int size) throws IOException {
         if (inputStream == null) {

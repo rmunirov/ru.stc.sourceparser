@@ -1,8 +1,9 @@
 package ru.innopolis.stc12.sourceparser;
 
-import com.sun.xml.internal.ws.util.ByteArrayBuffer;
 import org.apache.log4j.Logger;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,14 +14,14 @@ public class ParserExecutor {
     private static final Logger LOGGER = Logger.getLogger(ParserExecutor.class);
     private DataParser dataParser = new DataParser();
 
-    public boolean execute(List<ByteArrayBuffer> buffers, Set words, BlockingQueue result) throws ExecutionException, InterruptedException {
+    public boolean execute(List<ByteArrayOutputStream> buffers, Set words, BlockingQueue result) throws ExecutionException, InterruptedException {
         LOGGER.info("start execute parsing the buffers");
         ExecutorService threadPool = Executors.newFixedThreadPool(buffers.size());
         List<Future<Boolean>> futures = new ArrayList<>();
         LOGGER.info("created " + buffers.size() + " thread in the thread pool");
 
         for (int i = 0; i < buffers.size(); i++) {
-            InputStream stream = buffers.get(i).newInputStream();
+            InputStream stream = new ByteArrayInputStream(buffers.get(i).toByteArray());
             futures.add(CompletableFuture.supplyAsync(() -> dataParser.parse(stream, words, result), threadPool));
         }
 
