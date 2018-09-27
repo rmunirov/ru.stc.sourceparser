@@ -1,12 +1,10 @@
 package ru.innopolis.stc12.sourceparser;
 
 import com.sun.xml.internal.ws.util.ByteArrayBuffer;
-import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class SourceParser implements Parser {
     private static final Logger LOGGER = Logger.getLogger(Parser.class);
