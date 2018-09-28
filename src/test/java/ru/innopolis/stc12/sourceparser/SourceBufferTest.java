@@ -1,45 +1,77 @@
 package ru.innopolis.stc12.sourceparser;
 
-import org.apache.log4j.Logger;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.net.URL;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 class SourceBufferTest {
-    private static final Logger LOGGER = Logger.getLogger(SourceBufferTest.class);
     private SourceBuffer sourceBuffer;
+    private URL url = Mockito.mock(URL.class);
+    private ByteArrayInputStream inputStream = Mockito.mock(ByteArrayInputStream.class);
 
     @BeforeEach
-    void setUp() throws IOException {
-        String source = "D://Projects//java//testSet//7657f580-b3a2-495c-8716-cf772becde1c.txt";
+    void setUp() {
         sourceBuffer = new SourceBuffer();
     }
 
-    @AfterEach
-    void tearDown() {
+    @Test
+    void setSourceUrl() throws IOException {
+        when(url.openStream()).thenReturn(inputStream);
+        verify(url, times(1)).openStream();
+        assertThrows(NullPointerException.class, () -> sourceBuffer.setSourceUrl(null));
     }
 
     @Test
-    void setInputStream() {
-    }
-
-    @Test
-    void getBuffer() throws IOException {
-        assertNotNull(sourceBuffer.getBuffer());
-        sourceBuffer.setSourceUrl(null);
+    void getBufferWhenNullInputStream() throws IOException {
+        when(url.openStream()).thenReturn(null);
+        sourceBuffer.setSourceUrl(url);
         assertNull(sourceBuffer.getBuffer());
-        //TODO need teat assertEquals?
     }
 
     @Test
-    void getBuffer1() throws IOException {
-        assertNotNull(sourceBuffer.getBuffer(1));
+    void getBufferBySizeWhenNullInputStream() throws IOException {
+        when(url.openStream()).thenReturn(null);
+        sourceBuffer.setSourceUrl(url);
+        assertNull(sourceBuffer.getBuffer(1));
+    }
+
+    @Test
+    void getBufferBySizeWhenAvailableZero() throws IOException {
+        when(inputStream.available()).thenReturn(0);
+        when(url.openStream()).thenReturn(inputStream);
+        sourceBuffer.setSourceUrl(url);
+        assertNull(sourceBuffer.getBuffer(1));
+    }
+
+    @Test
+    void getBufferBySizeWhenSizeZero() throws IOException {
         assertNull(sourceBuffer.getBuffer(0));
+    }
+
+    @Test
+    void getBufferBySizeWhenReadDataFailed() throws IOException {
+        when(inputStream.available()).thenReturn(1);
+        when(inputStream.read(any())).thenReturn(-1);
+        when(url.openStream()).thenReturn(inputStream);
+        sourceBuffer.setSourceUrl(url);
+        assertNull(sourceBuffer.getBuffer(1));
+    }
+
+    @Test
+    void getBufferBySizeWhenAllOk() throws IOException {
+        when(inputStream.available()).thenReturn(1);
+        when(inputStream.read(any())).thenReturn(1);
+        when(url.openStream()).thenReturn(inputStream);
+        sourceBuffer.setSourceUrl(url);
+        assertNotNull(sourceBuffer.getBuffer(1));
     }
 
     @Test
@@ -51,6 +83,6 @@ class SourceBufferTest {
     }
 
     @Test
-    void getSameBufferSizeOfParts() {
+    void getSourceType() {
     }
 }

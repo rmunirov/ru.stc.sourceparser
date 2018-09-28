@@ -2,7 +2,6 @@ package ru.innopolis.stc12.sourceparser;
 
 import org.apache.log4j.Logger;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -22,32 +21,27 @@ public class SourceBuffer {
     }
 
     public void setSourceUrl(URL url) throws IOException {
-        this.inputStream = url.openStream();
+        if (inputStream != null) {
+            inputStream.close();
+        }
+        if (url == null) {
+            throw new NullPointerException("url is null");
+        }
+        inputStream = url.openStream();
         LOGGER.info("inputStream is set");
     }
 
-    public ByteArrayOutputStream getBuffer() throws IOException {
+    public CustomByteBuffer getBuffer() throws IOException {
         if (inputStream == null) {
-            LOGGER.warn("input stream is null");
+            LOGGER.warn("input stream is not set");
             return null;
         }
-        if (inputStream.available() == 0) {
-            LOGGER.warn("input stream is empty");
-            return null;
-        }
-        byte[] buffer = new byte[inputStream.available()];
-        if (inputStream.read(buffer) == -1) {
-            LOGGER.error("read data from inputStream is failed");
-            return null;
-        }
-        ByteArrayOutputStream result = new ByteArrayOutputStream();
-        result.write(buffer);
-        return result;
+        return getBuffer(inputStream.available());
     }
 
-    public ByteArrayOutputStream getBuffer(int size) throws IOException {
+    public CustomByteBuffer getBuffer(int size) throws IOException {
         if (inputStream == null) {
-            LOGGER.warn("input stream is null");
+            LOGGER.warn("input stream is not set");
             return null;
         }
         if (inputStream.available() == 0) {
@@ -62,33 +56,34 @@ public class SourceBuffer {
             size = inputStream.available();
             LOGGER.info("the size variable is change");
         }
+
         byte[] buffer = new byte[size];
         if (inputStream.read(buffer) == -1) {
             LOGGER.error("read data from inputStream is failed");
             return null;
         }
-        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        CustomByteBuffer result = new CustomByteBuffer(size);
         result.write(buffer);
         return result;
     }
 
-    public ByteArrayOutputStream getNextBufferByDelimiter(int size, Set delimiters) throws IOException {
-        ByteArrayOutputStream result = getBuffer(size);
+    public CustomByteBuffer getNextBufferByDelimiter(int size, Set delimiters) throws IOException {
+        CustomByteBuffer result = getBuffer(size);
         if (result == null) {
             return null;
         }
         if (inputStream.available() == 0) {
             return result;
         }
-        ByteArrayOutputStream bufferWithDelimiter = new ByteArrayOutputStream();
+        CustomByteBuffer bufferToDelimiter = new CustomByteBuffer();
         int symbol;
         while ((symbol = inputStream.read()) != -1) {
-            bufferWithDelimiter.write(symbol);
+            bufferToDelimiter.write(symbol);
             if (delimiters.contains(symbol)) {
                 break;
             }
         }
-        result.write(bufferWithDelimiter.toByteArray());
+        result.write(bufferToDelimiter.getRawData());
         return result;
     }
 
@@ -96,30 +91,15 @@ public class SourceBuffer {
         return inputStream.available();
     }
 
-    public FileType getSourceType() throws IOException {
+    public SourceType getSourceType(URL url) throws IOException {
+        setSourceUrl(url);
         if (inputStream.available() > LARGE_FILE_SIZE) {
-            return FileType.LARGE;
+            return SourceType.LARGE;
         }
         if (inputStream.available() <= SMALL_FILE_SIZE) {
-            return FileType.SMALL;
+            return SourceType.SMALL;
         } else {
-            return FileType.MEDIUM;
-        }
-    }
-
-
-    public int getSameBufferSizeOfParts(int partCountOfDivider, int size) throws IOException {
-        if (inputStream == null) {
-            return -1;
-        }
-        if (inputStream.available() <= 0) {
-            return -1;
-        }
-        int partCount = inputStream.available() / size + 1;
-        if (partCount <= partCountOfDivider) {
-            return inputStream.available() / partCount + 1;
-        } else {
-            return inputStream.available() / ((partCount / partCountOfDivider + 1) * partCountOfDivider) + 1;
+            return SourceType.MEDIUM;
         }
     }
 }

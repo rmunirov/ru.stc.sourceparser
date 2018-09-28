@@ -27,9 +27,9 @@ public class Main {
             //String[] sources = new String[]{"file:D://Projects//java//testSet//efc7b69e-84ad-427a-ab6c-4d9efe2a145f.txt"};
 
             long start = System.currentTimeMillis();
-
             SourceBuffer sourceBuffer = new SourceBuffer();
-            SourceParser sourceParser = new SourceParser(sourceBuffer);
+            SentenceFinder sentenceFinder = new SentenceFinder(sourceBuffer);
+            SourceParser sourceParser = new SourceParser(sentenceFinder);
             LOGGER.debug("Start parse files");
             sourceParser.getOccurencies(sources, words, res);
             LOGGER.debug("End parse files");
