@@ -22,6 +22,15 @@ public class SourceParser implements Parser {
 
     @Override
     public void getOccurencies(String[] sources, String[] words, String res) throws Exception {
+        if (sources == null) {
+            throw new NullPointerException("sources is null");
+        }
+        if (words == null) {
+            throw new NullPointerException("words is null");
+        }
+        if (res == null) {
+            throw new NullPointerException("res is null");
+        }
         keys.addAll(Arrays.asList(words));
         LOGGER.info("filling the words set");
         LOGGER.info("set size = " + keys.size());

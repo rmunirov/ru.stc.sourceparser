@@ -33,7 +33,16 @@ public class SentenceFinder {
         return futures;
     }
 
-    public boolean findSentencesInSource(String source, Set<String> words, BlockingQueue<String> result) throws IOException {
+    public void findSentencesInSource(String source, Set<String> words, BlockingQueue<String> result) throws IOException {
+        if (source == null) {
+            throw new NullPointerException("source is null");
+        }
+        if (words == null) {
+            throw new NullPointerException("words is null");
+        }
+        if (result == null) {
+            throw new NullPointerException("result is null");
+        }
         SourceType type = sourceBuffer.getSourceType(new URL(source));
         switch (type) {
             case LARGE:
@@ -52,10 +61,18 @@ public class SentenceFinder {
                 findSentenceInBufferByAsync(sourceBuffer.getBuffer(), new TreeSet<>(words), result);
                 break;
         }
-        return true;
     }
 
     public void findSentenceInBufferByAsync(CustomByteBuffer buffer, Set words, BlockingQueue<String> result) {
+        if (buffer == null) {
+            throw new NullPointerException("source is null");
+        }
+        if (words == null) {
+            throw new NullPointerException("words is null");
+        }
+        if (result == null) {
+            throw new NullPointerException("result is null");
+        }
         futures.add(CompletableFuture.supplyAsync(() -> findSentenceInBuffer(buffer, words, result), threadPool));
         LOGGER.info("added buffer in thread pool for parsing");
     }
