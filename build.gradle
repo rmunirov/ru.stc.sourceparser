@@ -2,7 +2,7 @@ plugins {
     id "java"
     id "maven"
     id "war"
-    id "org.sonarqube" version "2.6.2"
+    id "org.sonarqube" version "2.6"
 }
 
 group = 'ru.innopolis.stc12'
