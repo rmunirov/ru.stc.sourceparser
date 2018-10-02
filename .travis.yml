@@ -27,7 +27,7 @@ addons:
   sonarcloud:
     organization: "rmunirov"
     token:
-      secure: ${SONAR_TOKEN}
+      secure: $SONAR_TOKEN
 
 script:
 - ./gradlew assemble
