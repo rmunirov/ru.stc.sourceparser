@@ -13,8 +13,8 @@ import java.util.concurrent.*;
 
 public class SentenceFinder {
     private static final Logger LOGGER = Logger.getLogger(SentenceFinder.class);
-    private final Integer MAX_THREADS = 10;
-    private final Integer MAX_BUFFER_SIZE_FOR_LARGE_FILE = 10_485_760;
+    private static final Integer MAX_THREADS = 10;
+    private static final Integer MAX_BUFFER_SIZE_FOR_LARGE_FILE = 10_485_760;
     private SourceBuffer sourceBuffer;
     private ExecutorService threadPool;
     private List<Future<Boolean>> futures = new ArrayList<>();
@@ -114,6 +114,7 @@ public class SentenceFinder {
             buffer.close();
         } catch (InterruptedException | IOException e) {
             LOGGER.error(e);
+            Thread.currentThread().interrupt();
         }
         LOGGER.info("parsing stop");
         return true;
