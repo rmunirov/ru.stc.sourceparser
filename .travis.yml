@@ -32,5 +32,5 @@ addons:
 script:
 - ./gradlew assemble
 - ./gradlew check --rerun-tasks
-- sonar-scanner
+- sonar-scanner -Dsonar.login=09bbea5321523c31b8d9800ee04f1205a4893466
 - rm -rf .scannerwork
