@@ -24,10 +24,10 @@ directories:
 - $HOME/.gradle/wrapper/
 
 addons:
-sonarcloud:
-  organization: "rmunirov-github"
-  token:
-secure: ${SONAR_TOKEN}
+  sonarcloud:
+    organization: "rmunirov-github"
+    token:
+      secure: ${SONAR_TOKEN}
 
 script:
 - ./gradlew assemble
