@@ -32,6 +32,7 @@ public class ResultWriter extends Thread {
             }
         } catch (IOException | InterruptedException e) {
             LOGGER.error(e);
+            Thread.currentThread().interrupt();
         }
         LOGGER.info("ResultWriter is stopped");
     }

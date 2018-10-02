@@ -13,8 +13,8 @@ import java.util.concurrent.*;
 
 public class SentenceFinder {
     private static final Logger LOGGER = Logger.getLogger(SentenceFinder.class);
-    private final Integer MAX_THREADS = 10;
-    private final Integer MAX_BUFFER_SIZE_FOR_LARGE_FILE = 10_485_760;
+    private static final Integer MAX_THREADS = 10;
+    private static final Integer MAX_BUFFER_SIZE_FOR_LARGE_FILE = 10_485_760;
     private SourceBuffer sourceBuffer;
     private ExecutorService threadPool;
     private List<Future<Boolean>> futures = new ArrayList<>();
@@ -33,7 +33,16 @@ public class SentenceFinder {
         return futures;
     }
 
-    public boolean findSentencesInSource(String source, Set<String> words, BlockingQueue<String> result) throws IOException {
+    public void findSentencesInSource(String source, Set<String> words, BlockingQueue<String> result) throws IOException {
+        if (source == null) {
+            throw new NullPointerException("source is null");
+        }
+        if (words == null) {
+            throw new NullPointerException("words is null");
+        }
+        if (result == null) {
+            throw new NullPointerException("result is null");
+        }
         SourceType type = sourceBuffer.getSourceType(new URL(source));
         switch (type) {
             case LARGE:
@@ -52,10 +61,18 @@ public class SentenceFinder {
                 findSentenceInBufferByAsync(sourceBuffer.getBuffer(), new TreeSet<>(words), result);
                 break;
         }
-        return true;
     }
 
     public void findSentenceInBufferByAsync(CustomByteBuffer buffer, Set words, BlockingQueue<String> result) {
+        if (buffer == null) {
+            throw new NullPointerException("source is null");
+        }
+        if (words == null) {
+            throw new NullPointerException("words is null");
+        }
+        if (result == null) {
+            throw new NullPointerException("result is null");
+        }
         futures.add(CompletableFuture.supplyAsync(() -> findSentenceInBuffer(buffer, words, result), threadPool));
         LOGGER.info("added buffer in thread pool for parsing");
     }
@@ -97,6 +114,7 @@ public class SentenceFinder {
             buffer.close();
         } catch (InterruptedException | IOException e) {
             LOGGER.error(e);
+            Thread.currentThread().interrupt();
         }
         LOGGER.info("parsing stop");
         return true;

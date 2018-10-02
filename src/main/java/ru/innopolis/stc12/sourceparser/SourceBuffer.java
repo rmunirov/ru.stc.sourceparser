@@ -9,8 +9,8 @@ import java.util.Set;
 
 public class SourceBuffer {
     private static final Logger LOGGER = Logger.getLogger(SourceBuffer.class);
-    private final Integer LARGE_FILE_SIZE = 10_485_760;
-    private final Integer SMALL_FILE_SIZE = 51_200;
+    private static final Integer LARGE_FILE_SIZE = 10_485_760;
+    private static final Integer SMALL_FILE_SIZE = 51_200;
     private InputStream inputStream;
 
     public SourceBuffer(URL url) throws IOException {
@@ -75,6 +75,9 @@ public class SourceBuffer {
         if (inputStream.available() == 0) {
             return result;
         }
+        if (delimiters == null) {
+            return null;
+        }
         CustomByteBuffer bufferToDelimiter = new CustomByteBuffer();
         int symbol;
         while ((symbol = inputStream.read()) != -1) {
@@ -93,7 +96,7 @@ public class SourceBuffer {
 
     public SourceType getSourceType(URL url) throws IOException {
         setSourceUrl(url);
-        if (inputStream.available() > LARGE_FILE_SIZE) {
+        if (inputStream.available() >= LARGE_FILE_SIZE) {
             return SourceType.LARGE;
         }
         if (inputStream.available() <= SMALL_FILE_SIZE) {

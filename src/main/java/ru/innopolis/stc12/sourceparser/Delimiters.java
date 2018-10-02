@@ -4,8 +4,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class Delimiters {
-    public static Set<Integer> endOfSentence = new HashSet<>();
-    public static Set<Integer> endOfWord = new HashSet<>();
+    protected static final Set<Integer> endOfSentence = new HashSet<>();
+    protected static final Set<Integer> endOfWord = new HashSet<>();
+
+    private Delimiters() {
+    }
 
     static {
         endOfSentence.add(Integer.valueOf('.'));
