@@ -29,6 +29,8 @@ addons:
     token:
       secure: $SONARCLOUD_TOKEN
 
+#ERROR: You're only authorized to execute a local (preview) SonarQube analysis without pushing the results to the SonarQube server. Please contact your SonarQube administrator.
+#this error when script write - "- sonar-scanner" with out parameters
 script:
 - ./gradlew assemble
 - ./gradlew check --rerun-tasks
