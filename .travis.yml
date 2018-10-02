@@ -25,7 +25,7 @@ directories:
 
 addons:
   sonarcloud:
-    organization: "rmunirov-github"
+    organization: "rmunirov"
     token:
       secure: ${SONAR_TOKEN}
 
